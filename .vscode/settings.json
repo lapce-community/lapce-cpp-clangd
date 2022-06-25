@@ -1,0 +1,7 @@
+{
+  "rust-analyzer.checkOnSave.command": "clippy",
+  "files.exclude": {
+    "**/.crates.toml": true,
+    "**/.crates2.json": true
+  }
+}

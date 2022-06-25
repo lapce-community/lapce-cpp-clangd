@@ -1,0 +1,6 @@
+name = "lapce-cpp-clangd"
+version = "1.0.0"
+author = "panekj"
+display-name = "C/C++ (clangd)"
+description = "C/C++ for Lapce: powered by clangd"
+wasm = "bin/lapce-cpp-clangd.wasm"
