@@ -8,6 +8,7 @@ wasm = "lapce-cpp-clangd.wasm"
 
 [configuration]
 language_id = "cpp"
+clangd_path = ""
 
 [configuration.options.binary]
 args = []
