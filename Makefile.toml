@@ -1,0 +1,34 @@
+[tasks.release]
+dependencies = [
+  'build-release',
+  'copy-release',
+]
+
+[tasks.dev]
+dependencies = [
+  'build-dev',
+  'copy-dev',
+]
+
+[tasks.build-dev]
+command = 'cargo'
+args = ['build', '--target', 'wasm32-wasi']
+
+[tasks.copy-dev]
+script_runner = "@shell"
+script = '''
+rm ./lapce*.wasm
+cp ./target/wasm32-wasi/debug/lapce*.wasm ./
+'''
+
+[tasks.build-release]
+command = 'cargo'
+args = ['build', '--target', 'wasm32-wasi', '--release']
+
+[tasks.copy-release]
+script_runner = "@shell"
+script = '''
+rm ./lapce*.wasm
+cp ./target/wasm32-wasi/release/lapce*.wasm ./
+'''
+

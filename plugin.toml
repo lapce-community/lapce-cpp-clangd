@@ -1,7 +1,7 @@
 name = "lapce-cpp-clangd"
 display-name = "C/C++ (clangd)"
 description = "C/C++ for Lapce: powered by clangd"
-version = "0.0.2"
+version = "0.0.3"
 author = "panekj"
 repository = "panekj/lapce-cpp-clangd"
 wasm = "lapce-cpp-clangd.wasm"
@@ -9,6 +9,8 @@ wasm = "lapce-cpp-clangd.wasm"
 [configuration]
 language_id = "cpp"
 system_lsp = false
+disabled = false
+release = "14.0.3"
 
 [configuration.options.binary]
 args = []

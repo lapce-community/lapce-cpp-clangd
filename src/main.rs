@@ -1,5 +1,5 @@
 use std::{
-    fs::{self, File},
+    fs::{self, remove_file, File},
     io,
     path::PathBuf,
 };
@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use lapce_plugin::{register_plugin, send_notification, start_lsp, LapcePlugin};
+use zip::ZipArchive;
 
 #[derive(Default)]
 struct State {}
@@ -23,6 +24,8 @@ pub struct PluginInfo {
 pub struct Configuration {
     language_id: String,
     system_lsp: bool,
+    disabled: bool,
+    release: Option<String>,
     options: Option<Value>,
 }
 
@@ -32,27 +35,46 @@ const CLANGD_VER: &str = "14.0.3";
 
 impl LapcePlugin for State {
     fn initialize(&mut self, info: serde_json::Value) {
-        eprintln!("Starting lapce-cpp");
+        eprintln!("Starting plugin");
+
         let info = serde_json::from_value::<PluginInfo>(info).unwrap();
 
-        let exec_path = if !info.configuration.system_lsp {
+        if info.configuration.disabled {
+            eprintln!("plugin disabled, returning");
+        }
+
+        let exec_path = if info.configuration.system_lsp {
+            eprintln!("Using system LSP");
+            "clangd".to_string()
+        } else {
+            let clangd_version = if let Some(ver) = info.configuration.release {
+                ver
+            } else {
+                CLANGD_VER.to_string()
+            };
+
+            eprintln!("Using clangd version: {clangd_version}");
+
             let _ = match info.arch.as_str() {
                 "x86_64" => "x86_64",
                 _ => return,
             };
 
             let zip_file = match info.os.as_str() {
-                "macos" => format!("clangd-mac-{CLANGD_VER}.zip"),
-                "linux" => format!("clangd-linux-{CLANGD_VER}.zip"),
-                "windows" => format!("clangd-windows-{CLANGD_VER}.zip"),
-                _ => return
+                "macos" => format!("clangd-mac-{clangd_version}.zip"),
+                "linux" => format!("clangd-linux-{clangd_version}.zip"),
+                "windows" => format!("clangd-windows-{clangd_version}.zip"),
+                _ => return,
             };
 
             let zip_file = PathBuf::from(zip_file);
 
-            let download_url = format!("https://github.com/clangd/clangd/releases/download/{CLANGD_VER}/{}", zip_file.display());
+            let download_url = format!(
+                "https://github.com/clangd/clangd/releases/download/{clangd_version}/{}",
+                zip_file.display()
+            );
 
-            let mut server_path = PathBuf::from(format!("clangd_{CLANGD_VER}"));
+            let mut server_path = PathBuf::from(format!("clangd_{clangd_version}"));
             server_path = server_path.join("bin");
 
             match info.os.as_str() {
@@ -78,7 +100,6 @@ impl LapcePlugin for State {
                 send_notification(
                     "download_file",
                     &json!({
-                        // "url": download_asset.browser_download_url,
                         "url": download_url,
                         "path": zip_file,
                     }),
@@ -86,11 +107,11 @@ impl LapcePlugin for State {
 
                 if !zip_file.exists() {
                     eprintln!("clangd download failed");
-                    return
+                    return;
                 }
 
                 let mut zip =
-                    zip::ZipArchive::new(File::open(&zip_file).unwrap()).expect("failed to open zip");
+                    ZipArchive::new(File::open(&zip_file).unwrap()).expect("failed to open zip");
 
                 for i in 0..zip.len() {
                     let mut file = zip.by_index(i).unwrap();
@@ -107,7 +128,7 @@ impl LapcePlugin for State {
                                 fs::create_dir_all(&p).unwrap();
                             }
                         }
-                        let mut outfile = fs::File::create(&outpath).unwrap();
+                        let mut outfile = File::create(&outpath).unwrap();
                         io::copy(&mut file, &mut outfile).unwrap();
                     }
                 }
@@ -119,13 +140,11 @@ impl LapcePlugin for State {
                     }),
                 );
 
-                _ = std::fs::remove_file(&zip_file);
+                _ = remove_file(&zip_file);
             }
-            _ = std::fs::remove_file(&lock_file);
-            
+            _ = remove_file(&lock_file);
+
             exec_path
-        } else {
-            "clangd".to_string()
         };
 
         eprintln!("LSP server path: {}", exec_path);
