@@ -4,3 +4,7 @@ author = "panekj"
 display-name = "C/C++ (clangd)"
 description = "C/C++ for Lapce: powered by clangd"
 wasm = "bin/lapce-cpp-clangd.wasm"
+
+[activation]
+language = ["c", "cpp"]
+workspace-contains = ["*/*.c", "*/*.h", "*/*.cpp", "*/*.hpp"]
