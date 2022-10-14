@@ -7,7 +7,9 @@ use std::{
 use anyhow::{anyhow, Result};
 use lapce_plugin::{
   psp_types::{
-    lsp_types::{request::Initialize, DocumentFilter, DocumentSelector, InitializeParams, Url},
+    lsp_types::{
+      request::Initialize, DocumentFilter, DocumentSelector, InitializeParams, MessageType, Url,
+    },
     Request,
   },
   register_plugin, Http, LapcePlugin, VoltEnvironment, PLUGIN_RPC,
@@ -108,53 +110,53 @@ fn initialize(params: InitializeParams) -> Result<()> {
   let mut server_path = PathBuf::from(format!("clangd_{clangd_version}"));
   server_path = server_path.join("bin");
 
-  if buf.trim().is_empty() || buf.trim() != clangd_version {
-    if buf.trim() != clangd_version {
-      ok!(fs::remove_dir_all(&server_path));
-    }
+  // if buf.trim().is_empty() || buf.trim() != clangd_version {
+  //   if buf.trim() != clangd_version {
+  //   ok!(fs::remove_dir_all(&server_path));
+  // }
 
-    let zip_file = match VoltEnvironment::operating_system().as_deref() {
-      | Ok("macos") => PathBuf::from(format!("clangd-mac-{clangd_version}.zip")),
-      | Ok("linux") => PathBuf::from(format!("clangd-linux-{clangd_version}.zip")),
-      | Ok("windows") => PathBuf::from(format!("clangd-windows-{clangd_version}.zip")),
-      | Ok(v) => return Err(anyhow!("Unsupported OS: {}", v)),
-      | Err(e) => return Err(anyhow!("Error OS: {}", e)),
+  let zip_file = match VoltEnvironment::operating_system().as_deref() {
+    | Ok("macos") => PathBuf::from(format!("clangd-mac-{clangd_version}.zip")),
+    | Ok("linux") => PathBuf::from(format!("clangd-linux-{clangd_version}.zip")),
+    | Ok("windows") => PathBuf::from(format!("clangd-windows-{clangd_version}.zip")),
+    | Ok(v) => return Err(anyhow!("Unsupported OS: {}", v)),
+    | Err(e) => return Err(anyhow!("Error OS: {}", e)),
+  };
+
+  let download_url = format!(
+    "https://github.com/clangd/clangd/releases/download/{clangd_version}/{}",
+    zip_file.display()
+  );
+
+  let mut resp = ok!(Http::get(&download_url));
+  PLUGIN_RPC.stderr(&format!("STATUS_CODE: {:?}", resp.status_code));
+  let body = ok!(resp.body_read_all());
+  ok!(fs::write(&zip_file, body));
+
+  let mut zip = ok!(ZipArchive::new(ok!(File::open(&zip_file))));
+
+  for i in 0..zip.len() {
+    let mut file = ok!(zip.by_index(i));
+    let outpath = match file.enclosed_name() {
+      | Some(path) => path.to_owned(),
+      | None => continue,
     };
 
-    let download_url = format!(
-      "https://github.com/clangd/clangd/releases/download/{clangd_version}/{}",
-      zip_file.display()
-    );
-
-    let mut resp = ok!(Http::get(&download_url));
-    PLUGIN_RPC.stderr(&format!("STATUS_CODE: {:?}", resp.status_code));
-    let body = ok!(resp.body_read_all());
-    ok!(fs::write(&zip_file, body));
-
-    let mut zip = ok!(ZipArchive::new(ok!(File::open(&zip_file))));
-
-    for i in 0..zip.len() {
-      let mut file = ok!(zip.by_index(i));
-      let outpath = match file.enclosed_name() {
-        | Some(path) => path.to_owned(),
-        | None => continue,
-      };
-
-      if (*file.name()).ends_with('/') {
-        ok!(fs::create_dir_all(&outpath));
-      } else {
-        if let Some(p) = outpath.parent() {
-          if !p.exists() {
-            ok!(fs::create_dir_all(&p));
-          }
+    if (*file.name()).ends_with('/') {
+      ok!(fs::create_dir_all(&outpath));
+    } else {
+      if let Some(p) = outpath.parent() {
+        if !p.exists() {
+          ok!(fs::create_dir_all(&p));
         }
-        let mut outfile = ok!(File::create(&outpath));
-        ok!(io::copy(&mut file, &mut outfile));
       }
-
-      ok!(fs::remove_file(&zip_file));
+      let mut outfile = ok!(File::create(&outpath));
+      ok!(io::copy(&mut file, &mut outfile));
     }
+
+    ok!(fs::remove_file(&zip_file));
   }
+  // }
 
   ok!(last_ver.write_all(clangd_version.as_bytes()));
 
@@ -190,7 +192,10 @@ impl LapcePlugin for State {
     match method.as_str() {
       | Initialize::METHOD => {
         let params: InitializeParams = serde_json::from_value(params).unwrap();
-        let _ = initialize(params);
+        if let Err(e) = initialize(params) {
+          PLUGIN_RPC.window_log_message(MessageType::ERROR, e.to_string());
+          PLUGIN_RPC.window_show_message(MessageType::ERROR, e.to_string());
+        };
       }
       | _ => {}
     }

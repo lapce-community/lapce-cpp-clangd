@@ -1,10 +1,19 @@
+author = "panekj"
+description = "C/C++ for Lapce: powered by clangd"
+display-name = "C/C++ (clangd)"
 name = "lapce-cpp-clangd"
 version = "1.0.0"
-author = "panekj"
-display-name = "C/C++ (clangd)"
-description = "C/C++ for Lapce: powered by clangd"
 wasm = "bin/lapce-cpp-clangd.wasm"
 
 [activation]
 language = ["c", "cpp"]
-workspace-contains = ["*/*.c", "*/*.h", "*/*.cpp", "*/*.hpp"]
+workspace-contains = [
+  "*/*.c",
+  "*/*.h",
+  "*/*.cpp",
+  "*/*.hpp",
+]
+
+[config."volt.serverPath"]
+default = ""
+description = "Path to clangd"
