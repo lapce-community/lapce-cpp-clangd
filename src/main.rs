@@ -38,20 +38,51 @@ macro_rules! ok {
 }
 
 const CLANGD_VERSION: &str = "15.0.1";
+const CPP_PATTERN: &str = "**/*.{H,hh,hpp,h++,C,cc,cpp,c++}";
+const C_PATTERN: &str = "**/*.{h,c}";
 
 fn initialize(params: InitializeParams) -> Result<()> {
+  let mut cpp_pattern = string!(CPP_PATTERN);
+  let mut c_pattern = string!(C_PATTERN);
+
+  if let Some(options) = params.initialization_options.as_ref() {
+    if let Some(volt) = options.get("volt") {
+      if let Some(cpp_pat) = volt.get("cppPattern") {
+        if let Some(cpp_pat) = cpp_pat.as_str() {
+          let cpp_pat = cpp_pat.trim();
+          if !cpp_pat.is_empty() {
+            cpp_pattern = string!("**/*.{");
+            cpp_pattern.push_str(cpp_pat);
+            cpp_pattern.push('}');
+          }
+        }
+      }
+      if let Some(c_pat) = volt.get("cPattern") {
+        if let Some(c_pat) = c_pat.as_str() {
+          let c_pat = c_pat.trim();
+          if !c_pattern.is_empty() {
+            c_pattern = string!("**/*.{");
+            c_pattern.push_str(c_pat);
+            c_pattern.push('}');
+          }
+        }
+      }
+    }
+  }
+
   let document_selector: DocumentSelector = vec![
     DocumentFilter {
       language: Some(string!("cpp")),
-      pattern: Some(string!("**/*.{H,hh,hpp,h++,C,cc,cpp,c++}")),
+      pattern: Some(string!(cpp_pattern)),
       scheme: None,
     },
     DocumentFilter {
       language: Some(string!("c")),
-      pattern: Some(string!("**/*.{h,c}")),
+      pattern: Some(string!(c_pattern)),
       scheme: None,
     },
   ];
+
   let mut clangd_version = string!(CLANGD_VERSION);
   let mut server_args = vec![];
 

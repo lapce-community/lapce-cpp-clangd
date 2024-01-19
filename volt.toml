@@ -2,17 +2,25 @@ author = "panekj"
 description = "C/C++ for Lapce: powered by clangd"
 display-name = "C/C++ (clangd)"
 name = "lapce-cpp-clangd"
+wasm = "lapce-cpp-clangd.wasm"
 version = "1.0.0"
-wasm = "bin/lapce-cpp-clangd.wasm"
+description = "C/C++ language support"
+icon = "logo.svg"
+repository = "https://github.com/lapce-community/lapce-cpp-clangd"
 
 [activation]
-language = ["c", "cpp"]
-workspace-contains = [
-  "*/*.c",
-  "*/*.h",
-  "*/*.cpp",
-  "*/*.hpp",
+language = [
+    "c",
+    "cpp",
 ]
+
+[config."volt.cppPattern"]
+default = "H,hh,hpp,C,cc,cpp,c++"
+description = "C++ file extensions passed to clangd server"
+
+[config."volt.cPattern"]
+default = "h,c"
+description = "C file extensions passed to clangd server"
 
 [config."volt.serverPath"]
 default = ""
