@@ -153,11 +153,8 @@ fn initialize(params: InitializeParams) -> Result<()> {
       let mut outfile = ok!(File::create(&outpath));
       ok!(io::copy(&mut file, &mut outfile));
     }
-
-    ok!(fs::remove_file(&zip_file));
   }
-  // }
-
+  ok!(fs::remove_file(&zip_file));
   ok!(last_ver.write_all(clangd_version.as_bytes()));
 
   match VoltEnvironment::operating_system().as_deref() {
